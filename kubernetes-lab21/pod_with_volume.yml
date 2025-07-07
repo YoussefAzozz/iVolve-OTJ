@@ -10,8 +10,7 @@ spec:
         - name: app-logs
           mountPath: /var/log/app
   volumes:
-    - name: app-logs
-      hostPath:
-        path: /mnt/app-logs
-        type: DirectoryOrCreate
+  - name: app-logs
+    persistentVolumeClaim:
+      claimName: app-logs-pvc
 
