@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: logging-app
+spec:
+  containers:
+    - name: web_server
+      image: nginx:latest
+      volumeMounts:
+        - name: app-logs
+          mountPath: /var/log/app
+  volumes:
+    - name: app-logs
+      hostPath:
+        path: /mnt/app-logs
+        type: DirectoryOrCreate
+
