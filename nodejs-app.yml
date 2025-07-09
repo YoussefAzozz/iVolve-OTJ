@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodejs-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nodejs-app
+  template:
+    metadata:
+      labels:
+        app: nodejs-app
+    spec:
+      tolerations:
+        - key: "workload"
+          operator: "Equal"
+          value: "app"
+          effect: "NoSchedule"
+      initContainers:
+        - name: init-db
+          image: mariadb:10.5
+          command:
+            - sh
+            - -c
+            - |
+              until mysqladmin ping -h "$DB_HOST" --silent; do
+                echo "Waiting for MariaDB to be ready..."
+                sleep 3
+              done
+
+              echo "Creating user and database..."
+              mysql -h "$DB_HOST" -u "root" -p"$MARIADB_ROOT_PASSWORD" <<EOF
+              CREATE USER IF NOT EXISTS 'azozz'@'%' IDENTIFIED BY '$DB_PASSWORD';
+              CREATE DATABASE IF NOT EXISTS ivolve;
+              GRANT ALL PRIVILEGES ON ivolve.* TO 'azozz'@'%';
+              FLUSH PRIVILEGES;
+              EOF
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: nodejs-secret
+                  key: DB_PASSWORD
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: nodejs-config
+                  key: DB_HOST
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: nodejs-config
+                  key: DB_USER
+            - name: MARIADB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: nodejs-secret
+                  key: MARIADB_ROOT_PASSWORD
+
+      containers:
+        - name: nodejs-app
+          image: quay.io/youssef13/k8s_ivolve:1.0
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: nodejs-secret
+                  key: DB_PASSWORD
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: nodejs-config
+                  key: DB_HOST
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: nodejs-config
+                  key: DB_USER
+          volumeMounts:
+            - name: app-data
+              mountPath: /app/logs
+
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+      volumes:
+        - name: app-data
+          hostPath:
+            path: /mnt/app-logs
+            type: DirectoryOrCreate
+
