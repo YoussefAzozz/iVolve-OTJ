@@ -29,11 +29,7 @@ spec:
                 secretKeyRef:
                   name: nodejs-secret         # your Secret with DB_PASSWORD
                   key: MARIADB_ROOT_PASSWORD
-                    #- name: MARIADB_USER
-                    #valueFrom:
-                    #configMapKeyRef:
-                    #name: nodejs-config
-                    #key: DB_USER
+                  
 
           volumeMounts:
             - name: mariadb-data
@@ -50,4 +46,6 @@ spec:
         resources:
           requests:
             storage: 1Gi
+        storageClassName: standard
+
 
