@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: 'https://github.com/YoussefAzozz/argocd-lab.git'
-    path: ./
+    path: overlays/prod
     targetRevision: master
   destination:
     server: 'https://kubernetes.default.svc'
